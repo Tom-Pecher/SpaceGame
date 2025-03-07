@@ -22,6 +22,30 @@ public:
     }
 };
 
+class Debris {
+public:
+    sf::CircleShape shape;
+    sf::Vector2f velocity;
+    float lifetime;
+
+    Debris(float x, float y, sf::Vector2f vel) {
+        shape.setRadius(2.f);
+        shape.setFillColor(sf::Color::Yellow);
+        shape.setPosition(x, y);
+        velocity = vel;
+        lifetime = 5.0f; // Seconds the debris will exist
+    }
+
+    void update(float deltaTime) {
+        shape.move(velocity * deltaTime);
+        lifetime -= deltaTime;
+    }
+
+    bool isDead() {
+        return lifetime <= 0;
+    }
+};
+
 class Ship {
 public:
     sf::RectangleShape shape;
@@ -71,10 +95,34 @@ private:
     }
 };
 
+bool laserIntersectsAsteroid(const Ship& ship, const Asteroid& asteroid) {
+    if (!ship.isShooting) return false;
+    
+    sf::Vector2f shipCenter = ship.shape.getPosition() + sf::Vector2f(ship.shape.getSize().x / 2, ship.shape.getSize().y / 2);
+    sf::Vector2f asteroidCenter = asteroid.shape.getPosition() + sf::Vector2f(asteroid.shape.getRadius(), asteroid.shape.getRadius());
+    
+    // Get distance from asteroid center to laser line
+    sf::Vector2f laserDir = ship.targetPos - shipCenter;
+    float laserLength = std::sqrt(laserDir.x * laserDir.x + laserDir.y * laserDir.y);
+    laserDir /= laserLength; // Normalize
+    
+    sf::Vector2f asteroidToShip = asteroidCenter - shipCenter;
+    float dot = asteroidToShip.x * laserDir.x + asteroidToShip.y * laserDir.y;
+    sf::Vector2f projection = shipCenter + laserDir * dot;
+    
+    sf::Vector2f asteroidToProj = projection - asteroidCenter;
+    float distance = std::sqrt(asteroidToProj.x * asteroidToProj.x + asteroidToProj.y * asteroidToProj.y);
+    
+    return distance < asteroid.shape.getRadius() && dot > 0 && dot < laserLength;
+}
+
+
 int main() {
     sf::RenderWindow window(sf::VideoMode(800, 600), "Asteroid Mining Game");
     Ship ship(100, 300);
     Asteroid asteroid(500, 250, 0);
+    std::vector<Debris> debris;
+    sf::Clock clock;
 
     sf::Font font;
     if (!font.loadFromFile("/usr/share/fonts/truetype/msttcorefonts/arial.ttf")) {
@@ -89,6 +137,7 @@ int main() {
     materialText.setPosition(20, 20);
 
     while (window.isOpen()) {
+        float deltaTime = clock.restart().asSeconds();
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
@@ -116,16 +165,36 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W))    ship.move(0, -1);
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S))  ship.move(0, 1);
 
-        // Mining
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-            sf::Vector2f shipPos = ship.shape.getPosition();
-            sf::Vector2f asteroidPos = asteroid.shape.getPosition();
-
-            float distance = std::sqrt(std::pow(shipPos.x - asteroidPos.x, 2) + std::pow(shipPos.y - asteroidPos.y, 2));
-            if (distance < 60) {  // Mining range
-                asteroid.mine(10);
+        for (auto it = debris.begin(); it != debris.end();) {
+            it->update(deltaTime);
+            if (it->isDead()) {
+                it = debris.erase(it);
+            } else {
+                ++it;
             }
         }
+
+        // Create new debris if laser hits asteroid
+        if (laserIntersectsAsteroid(ship, asteroid)) {
+            for (int i = 0; i < 2; i++) {
+                float angle = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
+                sf::Vector2f vel(std::cos(angle) * 100.f, std::sin(angle) * 100.f);
+                sf::Vector2f asteroidCenter = asteroid.shape.getPosition() + 
+                    sf::Vector2f(asteroid.shape.getRadius(), asteroid.shape.getRadius());
+                debris.emplace_back(asteroidCenter.x, asteroidCenter.y, vel);
+            }
+        }
+
+        // Mining
+        // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+        //     sf::Vector2f shipPos = ship.shape.getPosition();
+        //     sf::Vector2f asteroidPos = asteroid.shape.getPosition();
+
+        //     float distance = std::sqrt(std::pow(shipPos.x - asteroidPos.x, 2) + std::pow(shipPos.y - asteroidPos.y, 2));
+        //     if (distance < 60) {  // Mining range
+        //         asteroid.mine(10);
+        //     }
+        // }
 
         // Update UI
         std::stringstream ss;
@@ -135,9 +204,12 @@ int main() {
         // Draw
         window.clear();
         window.draw(asteroid.shape);
-        window.draw(ship.shape);
         if (ship.isShooting) {
             window.draw(ship.laser);
+        }
+        window.draw(ship.shape);
+        for (const auto& d : debris) {
+            window.draw(d.shape);
         }
         window.draw(materialText);
         window.display();
