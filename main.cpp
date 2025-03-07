@@ -104,10 +104,10 @@ int main() {
         }
 
         // Ship Movement
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  ship.move(-1, 0);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) ship.move(1, 0);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))    ship.move(0, -1);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))  ship.move(0, 1);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  ship.move(-1, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) ship.move(1, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left))    ship.move(0, -1);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  ship.move(0, 1);
 
         // Mining
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
