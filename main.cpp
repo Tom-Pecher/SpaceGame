@@ -26,40 +26,47 @@ class Ship {
 public:
     sf::RectangleShape shape;
     float speed = 1.f;
-    sf::RectangleShape laser;  // Add laser member
-    bool isShooting = false;   // Track if laser is being shown
-    sf::Vector2f targetPos;    // Store target position for laser
+    sf::RectangleShape laser;
+    bool isShooting = false;
+    sf::Vector2f targetPos;
 
     Ship(float x, float y) {
         shape.setSize({40.f, 40.f});
         shape.setFillColor(sf::Color::Blue);
         shape.setPosition(x, y);
         
-        // Initialize laser
-        laser.setSize({1.f, 1.f});  // Width will be adjusted when shooting
+        laser.setSize({1.f, 1.f});
         laser.setFillColor(sf::Color::Green);
     }
 
     void move(float dx, float dy) {
         shape.move(dx * speed, dy * speed);
+        // Update laser position if shooting
+        if (isShooting) {
+            updateLaser();
+        }
     }
 
     void shoot(sf::Vector2f target) {
         isShooting = true;
         targetPos = target;
-        
+        updateLaser();
+    }
+
+private:
+    void updateLaser() {
         // Get ship's center position
         sf::Vector2f shipCenter = shape.getPosition() + sf::Vector2f(shape.getSize().x / 2, shape.getSize().y / 2);
         
         // Calculate laser angle and length
-        float dx = target.x - shipCenter.x;
-        float dy = target.y - shipCenter.y;
+        float dx = targetPos.x - shipCenter.x;
+        float dy = targetPos.y - shipCenter.y;
         float rotation = std::atan2(dy, dx) * 180 / M_PI;
         float length = std::sqrt(dx*dx + dy*dy);
         
         // Set laser properties
         laser.setPosition(shipCenter);
-        laser.setSize({length, 2.f});  // Make laser 2 pixels thick
+        laser.setSize({length, 2.f});
         laser.setRotation(rotation);
     }
 };
@@ -104,10 +111,10 @@ int main() {
         }
 
         // Ship Movement
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  ship.move(-1, 0);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) ship.move(1, 0);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left))    ship.move(0, -1);
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  ship.move(0, 1);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Left) || sf::Keyboard::isKeyPressed(sf::Keyboard::A))  ship.move(-1, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) ship.move(1, 0);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up) || sf::Keyboard::isKeyPressed(sf::Keyboard::W))    ship.move(0, -1);
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S))  ship.move(0, 1);
 
         // Mining
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
