@@ -176,12 +176,24 @@ int main() {
 
         // Create new debris if laser hits asteroid
         if (laserIntersectsAsteroid(ship, asteroid)) {
-            for (int i = 0; i < 2; i++) {
-                float angle = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
-                sf::Vector2f vel(std::cos(angle) * 100.f, std::sin(angle) * 100.f);
-                sf::Vector2f asteroidCenter = asteroid.shape.getPosition() + 
-                    sf::Vector2f(asteroid.shape.getRadius(), asteroid.shape.getRadius());
-                debris.emplace_back(asteroidCenter.x, asteroidCenter.y, vel);
+            // 30% chance to emit debris per frame when hit
+            if ((static_cast<float>(rand()) / RAND_MAX) < 0.01f) {
+                // Emit 2-4 pieces of debris
+                int numDebris = 2 + (rand() % 3);
+                for (int i = 0; i < numDebris; i++) {
+                    float angle = static_cast<float>(rand()) / RAND_MAX * 2 * M_PI;
+                    // Random velocity between 50 and 150
+                    float speed = 50.f + (static_cast<float>(rand()) / RAND_MAX) * 100.f;
+                    sf::Vector2f vel(std::cos(angle) * speed, std::sin(angle) * speed);
+                    
+                    // Slightly randomize starting position around asteroid center
+                    sf::Vector2f asteroidCenter = asteroid.shape.getPosition() + 
+                        sf::Vector2f(asteroid.shape.getRadius(), asteroid.shape.getRadius());
+                    float offsetX = (static_cast<float>(rand()) / RAND_MAX * 20.f) - 10.f;
+                    float offsetY = (static_cast<float>(rand()) / RAND_MAX * 20.f) - 10.f;
+                    
+                    debris.emplace_back(asteroidCenter.x + offsetX, asteroidCenter.y + offsetY, vel);
+                }
             }
         }
 
