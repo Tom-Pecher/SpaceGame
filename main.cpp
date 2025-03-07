@@ -88,11 +88,11 @@ int main() {
                 window.close();
             
             // Handle mouse click for shooting
-            if (event.type == sf::Event::MouseButtonPressed) {
-                if (event.mouseButton.button == sf::Mouse::Left) {
-                    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                    ship.shoot(sf::Vector2f(mousePos));
-                }
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                ship.shoot(sf::Vector2f(mousePos));
+            } else {
+                ship.isShooting = false;
             }
             
             // Reset laser when mouse button is released
