@@ -6,6 +6,8 @@
 #include <iostream>
 #include <sstream>
 
+class Ship;
+
 class Asteroid {
 public:
     sf::CircleShape shape;
@@ -27,22 +29,20 @@ public:
     sf::CircleShape shape;
     sf::Vector2f velocity;
     float lifetime;
+    bool isCollected = false;
 
     Debris(float x, float y, sf::Vector2f vel) {
         shape.setRadius(2.f);
         shape.setFillColor(sf::Color::Yellow);
         shape.setPosition(x, y);
         velocity = vel;
-        lifetime = 5.0f; // Seconds the debris will exist
+        lifetime = 5.0f;
     }
 
-    void update(float deltaTime) {
-        shape.move(velocity * deltaTime);
-        lifetime -= deltaTime;
-    }
+    void update(float deltaTime, const Ship& ship);
 
     bool isDead() {
-        return lifetime <= 0;
+        return lifetime <= 0 || isCollected;
     }
 };
 
@@ -95,6 +95,36 @@ private:
     }
 };
 
+void Debris::update(float deltaTime, const Ship& ship) {
+    // Get distance to ship
+    sf::Vector2f shipCenter = ship.shape.getPosition() + 
+        sf::Vector2f(ship.shape.getSize().x / 2, ship.shape.getSize().y / 2);
+    sf::Vector2f debrisPos = shape.getPosition();
+    sf::Vector2f toShip = shipCenter - debrisPos;
+    float distance = std::sqrt(toShip.x * toShip.x + toShip.y * toShip.y);
+
+    // Attraction range
+    const float ATTRACTION_RANGE = 250.f;
+    const float COLLECTION_RANGE = 20.f;
+    
+    if (distance < COLLECTION_RANGE) {
+        isCollected = true;
+    }
+    else if (distance < ATTRACTION_RANGE) {
+        // Normalize direction to ship
+        toShip /= distance;
+        
+        // Add attraction force with inverse square relationship
+        // This creates a much stronger pull when close, like gravity
+        float distanceRatio = distance / ATTRACTION_RANGE;
+        float attractionStrength = 500.f * (1.0f / (distanceRatio * distanceRatio));
+        velocity += toShip * attractionStrength * deltaTime;
+    }
+
+    shape.move(velocity * deltaTime);
+    lifetime -= deltaTime;
+}
+
 bool laserIntersectsAsteroid(const Ship& ship, const Asteroid& asteroid) {
     if (!ship.isShooting) return false;
     
@@ -123,6 +153,8 @@ int main() {
     Asteroid asteroid(500, 250, 0);
     std::vector<Debris> debris;
     sf::Clock clock;
+
+    int collectedMaterial = 0;
 
     sf::Font font;
     if (!font.loadFromFile("/usr/share/fonts/truetype/msttcorefonts/arial.ttf")) {
@@ -166,10 +198,15 @@ int main() {
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down) || sf::Keyboard::isKeyPressed(sf::Keyboard::S))  ship.move(0, 1);
 
         for (auto it = debris.begin(); it != debris.end();) {
-            it->update(deltaTime);
-            if (it->isDead()) {
+            it->update(deltaTime, ship);
+            if (it->isCollected) {
+                collectedMaterial += 1;  // Increment material when collected
                 it = debris.erase(it);
-            } else {
+            }
+            else if (it->isDead()) {
+                it = debris.erase(it);
+            }
+            else {
                 ++it;
             }
         }
@@ -197,20 +234,9 @@ int main() {
             }
         }
 
-        // Mining
-        // if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-        //     sf::Vector2f shipPos = ship.shape.getPosition();
-        //     sf::Vector2f asteroidPos = asteroid.shape.getPosition();
-
-        //     float distance = std::sqrt(std::pow(shipPos.x - asteroidPos.x, 2) + std::pow(shipPos.y - asteroidPos.y, 2));
-        //     if (distance < 60) {  // Mining range
-        //         asteroid.mine(10);
-        //     }
-        // }
-
         // Update UI
         std::stringstream ss;
-        ss << "Asteroid Material: " << asteroid.material;
+        ss << "Asteroid Material: " << collectedMaterial;
         materialText.setString(ss.str());
 
         // Draw
