@@ -26,15 +26,41 @@ class Ship {
 public:
     sf::RectangleShape shape;
     float speed = 1.f;
+    sf::RectangleShape laser;  // Add laser member
+    bool isShooting = false;   // Track if laser is being shown
+    sf::Vector2f targetPos;    // Store target position for laser
 
     Ship(float x, float y) {
         shape.setSize({40.f, 40.f});
         shape.setFillColor(sf::Color::Blue);
         shape.setPosition(x, y);
+        
+        // Initialize laser
+        laser.setSize({1.f, 1.f});  // Width will be adjusted when shooting
+        laser.setFillColor(sf::Color::Green);
     }
 
     void move(float dx, float dy) {
         shape.move(dx * speed, dy * speed);
+    }
+
+    void shoot(sf::Vector2f target) {
+        isShooting = true;
+        targetPos = target;
+        
+        // Get ship's center position
+        sf::Vector2f shipCenter = shape.getPosition() + sf::Vector2f(shape.getSize().x / 2, shape.getSize().y / 2);
+        
+        // Calculate laser angle and length
+        float dx = target.x - shipCenter.x;
+        float dy = target.y - shipCenter.y;
+        float rotation = std::atan2(dy, dx) * 180 / M_PI;
+        float length = std::sqrt(dx*dx + dy*dy);
+        
+        // Set laser properties
+        laser.setPosition(shipCenter);
+        laser.setSize({length, 2.f});  // Make laser 2 pixels thick
+        laser.setRotation(rotation);
     }
 };
 
@@ -60,6 +86,21 @@ int main() {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
+            
+            // Handle mouse click for shooting
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                    ship.shoot(sf::Vector2f(mousePos));
+                }
+            }
+            
+            // Reset laser when mouse button is released
+            if (event.type == sf::Event::MouseButtonReleased) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    ship.isShooting = false;
+                }
+            }
         }
 
         // Ship Movement
@@ -88,6 +129,9 @@ int main() {
         window.clear();
         window.draw(asteroid.shape);
         window.draw(ship.shape);
+        if (ship.isShooting) {
+            window.draw(ship.laser);
+        }
         window.draw(materialText);
         window.display();
     }
